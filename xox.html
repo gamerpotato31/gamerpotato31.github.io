@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ornitorenk vs Kirpi - XOX</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding-top: 40px;
+        }
+        h1 {
+            font-size: 2.5rem;
+            color: #4CAF50;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            font-size: 1.1rem;
+            color: #b0b0b0;
+            margin-bottom: 25px;
+        }
+        #status {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ffd400;
+            margin-bottom: 20px;
+            height: 35px;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 110px);
+            grid-template-rows: repeat(3, 110px);
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        .cell {
+            background-color: #1e1e1e;
+            border: 3px solid #333;
+            border-radius: 12px;
+            font-size: 3.2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s, border-color 0.2s;
+            user-select: none;
+        }
+        .cell:hover {
+            background-color: #282828;
+            border-color: #4CAF50;
+        }
+        .cell.ornitorenk {
+            color: #4CAF50;
+        }
+        .cell.kirpi {
+            color: #ff9800;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 25px;
+            font-size: 1.1rem;
+            text-decoration: none;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+            margin: 5px;
+            font-weight: bold;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .btn-back {
+            background-color: #333;
+        }
+        .btn-back:hover {
+            background-color: #444;
+        }
+        .scoreboard {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        .score-box {
+            background: #1a1a1a;
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🦫 Ornitorenk vs Kirpi 🦔</h1>
+    <p class="subtitle">Aynı cihazda arkadaşınla sırayla kapış!</p>
+
+    <div class="scoreboard">
+        <div class="score-box">🦫 Ornitorenk: <span id="scoreX">0</span></div>
+        <div class="score-box">🦔 Kirpi: <span id="scoreO">0</span></div>
+    </div>
+
+    <div id="status">Sıra: 🦫 Ornitorenk</div>
+
+    <div class="board" id="board">
+        <div class="cell" data-index="0"></div>
+        <div class="cell" data-index="1"></div>
+        <div class="cell" data-index="2"></div>
+        <div class="cell" data-index="3"></div>
+        <div class="cell" data-index="4"></div>
+        <div class="cell" data-index="5"></div>
+        <div class="cell" data-index="6"></div>
+        <div class="cell" data-index="7"></div>
+        <div class="cell" data-index="8"></div>
+    </div>
+
+    <div>
+        <button class="btn" id="resetBtn">Yeniden Başla</button>
+        <a href="index.html" class="btn btn-back">Ana Sayfaya Dön</a>
+    </div>
+
+    <script>
+        const boardElement = document.getElementById('board');
+        const statusElement = document.getElementById('status');
+        const resetBtn = document.getElementById('resetBtn');
+        const scoreXEl = document.getElementById('scoreX');
+        const scoreOEl = document.getElementById('scoreO');
+
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = '🦫'; // Ornitorenk başlar
+        let gameActive = true;
+        let scoreX = 0;
+        let scoreO = 0;
+
+        const winningConditions = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8], // Satırlar
+            [0, 3, 6], [1, 4, 7], [2, 5, 8], // Sütunlar
+            [0, 4, 8], [2, 4, 6]             // Çaprazlar
+        ];
+
+        function handleCellClick(e) {
+            const index = e.target.getAttribute('data-index');
+
+            if (board[index] !== '' || !gameActive) return;
+
+            board[index] = currentPlayer;
+            e.target.textContent = currentPlayer;
+            e.target.classList.add(currentPlayer === '🦫' ? 'ornitorenk' : 'kirpi');
+
+            checkResult();
+        }
+
+        function checkResult() {
+            let roundWon = false;
+            let winningCombination = null;
+
+            for (let i = 0; i < winningConditions.length; i++) {
+                const [a, b, c] = winningConditions[i];
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    roundWon = true;
+                    winningCombination = [a, b, c];
+                    break;
+                }
+            }
+
+            if (roundWon) {
+                if (currentPlayer === '🦫') {
+                    statusElement.textContent = '🎉 Kazanan: 🦫 Ornitorenk!';
+                    scoreX++;
+                    scoreXEl.textContent = scoreX;
+                } else {
+                    statusElement.textContent = '🎉 Kazanan: 🦔 Kirpi!';
+                    scoreO++;
+                    scoreOEl.textContent = scoreO;
+                }
+                gameActive = false;
+                return;
+            }
+
+            if (!board.includes('')) {
+                statusElement.textContent = '🤝 Berabere!';
+                gameActive = false;
+                return;
+            }
+
+            currentPlayer = currentPlayer === '🦫' ? '🦔' : '🦫';
+            statusElement.textContent = `Sıra: ${currentPlayer} ${currentPlayer === '🦫' ? 'Ornitorenk' : 'Kirpi'}`;
+        }
+
+        function resetGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            gameActive = true;
+            currentPlayer = '🦫';
+            statusElement.textContent = 'Sıra: 🦫 Ornitorenk';
+            
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.textContent = '';
+                cell.classList.remove('ornitorenk', 'kirpi');
+            });
+        }
+
+        boardElement.addEventListener('click', handleCellClick);
+        resetBtn.addEventListener('click', resetGame);
+    </script>
+</body>
+</html>
