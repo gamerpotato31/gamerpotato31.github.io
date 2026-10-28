@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Satranç - 2 Kişilik</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#1e1b18;color:#eee;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:8px;padding:12px 8px}
+h1{margin:0;font-size:1.2rem;height:1.6rem;line-height:1.6rem}
+#wrap{--s:min(94vw,60vh,520px);width:var(--s);display:flex;flex-direction:column;gap:8px}
+#info,#clk,#cap{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px}
+#info{height:36px}
+#st{font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clk{height:40px}
+.cb{flex:1;text-align:center;padding:6px 4px;border-radius:6px;background:#2b2622;font-variant-numeric:tabular-nums;font-size:.95rem;white-space:nowrap}
+.cb.act{background:#5a4630;outline:2px solid #e0b060}
+.cb.low{background:#8a2a22}
+#cap{height:28px;font-size:1.1rem;line-height:1;overflow:hidden}
+#cap span{white-space:nowrap}
+#bd{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));grid-template-rows:repeat(8,minmax(0,1fr));width:var(--s);height:var(--s);border:4px solid #5a4630;border-radius:4px;user-select:none;touch-action:manipulation}
+.sq{display:flex;align-items:center;justify-content:center;position:relative;cursor:pointer;overflow:hidden;font-size:calc(var(--s)/8*.78);line-height:1}
+.l{background:var(--l,#f0d9b5)}.d{background:var(--d,#b58863)}
+.sq.last{box-shadow:inset 0 0 0 100px rgba(255,235,59,.35)}
+.sq.sel{box-shadow:inset 0 0 0 100px rgba(76,175,80,.55)}
+.sq.chk{box-shadow:inset 0 0 0 100px rgba(244,67,54,.6)}
+.sq.mv::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:rgba(0,0,0,.28)}
+.sq.mv.cp::after{width:90%;height:90%;background:none;border:4px solid rgba(0,0,0,.28)}
+.w{color:var(--wc,#fff);text-shadow:var(--ws,0 0 2px #000,0 0 2px #000,0 0 3px #000)}
+.b{color:var(--bc,#111);text-shadow:var(--bs,0 0 1px #aaa)}
+.emo .w,.emo .b{display:inline-flex;align-items:center;justify-content:center;width:1.3em;height:1.3em;border-radius:50%;font-size:.62em;text-shadow:none}
+.emo .w{background:#fff}.emo .b{background:#3a3a3a}
+button,select{background:#5a4630;color:#fff;border:0;border-radius:6px;padding:7px 12px;font-size:.9rem;cursor:pointer}
+button:hover{background:#7a6040}
+#pr{position:fixed;inset:0;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center}
+#pr div{background:#2b2622;padding:16px;border-radius:10px;display:flex;gap:10px}
+#pr span{font-size:3rem;cursor:pointer;border-radius:8px;padding:4px 10px}
+body:not(.emo) #pr span{background:#b58863}
+button:disabled{opacity:.5;cursor:default}
+#sh{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:5}
+#shb{background:#2b2622;border-radius:10px;padding:14px;width:min(94vw,460px);max-height:86vh;overflow-y:auto}
+#shh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:#1e1b18;margin-top:8px}
+.card .in{flex:1}.card small{color:#bbb}
+.pv{display:flex;font-size:28px;line-height:1}
+.pv div{width:46px;height:46px;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<h1>♟ Satranç</h1>
+<div id="wrap">
+  <div id="info"><span id="st"></span><span><button id="shop">⭐ <b id="pt">0</b> Mağaza</button> <button id="nw">Yeni Oyun</button></span></div>
+  <div id="clk">
+    <div class="cb" id="tw"></div>
+    <div class="cb" id="tb"></div>
+  </div>
+  <div id="cap"><span id="cw"></span><span id="cbk"></span></div>
+  <div id="bd"></div>
+</div>
+<div id="sh"><div id="shb"><div id="shh"><b>Taş Kostümleri</b><span id="shp"></span><button id="shx">Kapat</button></div><div id="shl"></div></div></div>
+<div id="pr"><div id="pc"></div></div>
+<script>
+const G={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
+const K8=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+const N8=[[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+const ok=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
+
+const SK=[
+{id:'k',n:'Klasik',p:0},
+{id:'g',n:'Altın & Gümüş',p:60,l:'#e8e0d0',d:'#7d6b4f',wc:'#d8dde6',ws:'0 0 2px #000,0 0 3px #000',bc:'#e0a800',bs:'0 0 2px #3a2a00,0 0 3px #000'},
+{id:'i',n:'Buz & Ateş',p:100,l:'#cfe6f2',d:'#5f8aa6',wc:'#bfeaff',ws:'0 0 3px #035,0 0 5px #0af',bc:'#ff5a1f',bs:'0 0 3px #400,0 0 5px #f90'},
+{id:'n',n:'Neon',p:140,l:'#2a2540',d:'#17142a',wc:'#00f0ff',ws:'0 0 6px #00f0ff',bc:'#ff2bd6',bs:'0 0 6px #ff2bd6'},
+{id:'a',n:'Hayvanlar',p:200,e:1,g:{k:'🦁',q:'🦄',r:'🐘',b:'🦉',n:'🐴',p:'🐭'},l:'#cfe8b5',d:'#6f9a52'},
+{id:'u',n:'Uzay',p:260,e:1,g:{k:'👽',q:'🌟',r:'🚀',b:'🌙',n:'🛸',p:'☄️'},l:'#3b4a7a',d:'#1d2547'}];
+let D={pts:0,own:['k'],sk:'k'};
+try{const x=JSON.parse(localStorage.getItem('satranc_v1'));if(x&&x.own)D=x}catch(e){}
+const save=()=>{try{localStorage.setItem('satranc_v1',JSON.stringify(D))}catch(e){}};
+const cur=()=>SK.find(k=>k.id==D.sk)||SK[0];
+const gl=(t,k=cur())=>k.e?k.g[t]:G[t]+'\uFE0E';
+function paint(k,el){
+  const v={l:k.l||'#f0d9b5',d:k.d||'#b58863',wc:k.wc||'#fff',ws:k.ws||'0 0 2px #000,0 0 2px #000,0 0 3px #000',bc:k.bc||'#111',bs:k.bs||'0 0 1px #aaa'};
+  for(const n in v)el.style.setProperty('--'+n,v[n]);
+}
+function applySkin(){paint(cur(),document.documentElement);document.body.classList.toggle('emo',!!cur().e)}
+function shop(){
+  $('shp').textContent='⭐ '+D.pts;$('pt').textContent=D.pts;
+  const L=$('shl');L.innerHTML='';
+  for(const k of SK){
+    const own=D.own.includes(k.id),c=document.createElement('div');
+    c.className='card'+(k.e?' emo':'');paint(k,c);
+    c.innerHTML=`<div class="pv"><div class="l"><span class="w">${gl('k',k)}</span></div><div class="d"><span class="b">${gl('k',k)}</span></div></div><div class="in"><b>${k.n}</b><br><small>${own?'Sahipsin':'⭐ '+k.p}</small></div>`;
+    const b=document.createElement('button');
+    if(D.sk==k.id){b.textContent='Seçili';b.disabled=true}
+    else if(own){b.textContent='Seç';b.onclick=()=>{D.sk=k.id;save();applySkin();shop();draw()}}
+    else{b.textContent='Satın Al';b.disabled=D.pts<k.p;b.onclick=()=>{D.pts-=k.p;D.own.push(k.id);D.sk=k.id;save();applySkin();shop();draw()}}
+    c.appendChild(b);L.appendChild(c);
+  }
+}
+function init(){
+  const b=Array(64).fill(null),o='rnbqkbnr';
+  for(let i=0;i<8;i++){b[i]={t:o[i],c:'b'};b[8+i]={t:'p',c:'b'};b[48+i]={t:'p',c:'w'};b[56+i]={t:o[i],c:'w'}}
+  return{b,turn:'w',cs:{wK:1,wQ:1,bK:1,bQ:1},ep:-1,cap:{w:[],b:[]},last:null};
+}
+
+function att(b,s,by){
+  const r=s>>3,c=s&7,dir=by=='w'?-1:1;
+  for(const dc of[-1,1]){const pr=r-dir,pc=c+dc;if(ok(pr,pc)){const p=b[pr*8+pc];if(p&&p.c==by&&p.t=='p')return 1}}
+  for(const[dr,dc]of N8){if(ok(r+dr,c+dc)){const p=b[(r+dr)*8+c+dc];if(p&&p.c==by&&p.t=='n')return 1}}
+  for(const[dr,dc]of K8){
+    if(ok(r+dr,c+dc)){const p=b[(r+dr)*8+c+dc];if(p&&p.c==by&&p.t=='k')return 1}
+    const diag=dr&&dc;let rr=r+dr,cc=c+dc;
+    while(ok(rr,cc)){const p=b[rr*8+cc];if(p){if(p.c==by&&(p.t=='q'||p.t==(diag?'b':'r')))return 1;break}rr+=dr;cc+=dc}
+  }
+  return 0;
+}
+const inCheck=(b,c)=>att(b,b.findIndex(p=>p&&p.t=='k'&&p.c==c),c=='w'?'b':'w');
+
+function gen(S,s){
+  const b=S.b,p=b[s];if(!p)return[];
+  const r=s>>3,c=s&7,m=[],o=p.c=='w'?'b':'w',add=(t,x)=>m.push({f:s,t,x});
+  if(p.t=='p'){
+    const d=p.c=='w'?-1:1,st=p.c=='w'?6:1,one=(r+d)*8+c;
+    if(!b[one]){add(one);if(r==st&&!b[one+d*8])add(one+d*8)}
+    for(const dc of[-1,1]){const nc=c+dc;if(nc<0||nc>7)continue;const t=(r+d)*8+nc;
+      if(b[t]&&b[t].c==o)add(t);else if(t==S.ep)add(t,'ep')}
+  }else if(p.t=='n'||p.t=='k'){
+    for(const[dr,dc]of(p.t=='n'?N8:K8)){if(!ok(r+dr,c+dc))continue;const t=(r+dr)*8+c+dc;if(!b[t]||b[t].c==o)add(t)}
+    if(p.t=='k'&&s==(p.c=='w'?60:4)&&!att(b,s,o)){
+      if(S.cs[p.c+'K']&&!b[s+1]&&!b[s+2]&&!att(b,s+1,o)&&!att(b,s+2,o))add(s+2,'K');
+      if(S.cs[p.c+'Q']&&!b[s-1]&&!b[s-2]&&!b[s-3]&&!att(b,s-1,o)&&!att(b,s-2,o))add(s-2,'Q');
+    }
+  }else{
+    for(const[dr,dc]of K8){
+      const diag=dr&&dc;if(p.t=='b'&&!diag||p.t=='r'&&diag)continue;
+      let rr=r+dr,cc=c+dc;
+      while(ok(rr,cc)){const t=rr*8+cc;if(b[t]){if(b[t].c==o)add(t);break}add(t);rr+=dr;cc+=dc}
+    }
+  }
+  return m;
+}
+
+function mk(S,v){
+  const n={b:S.b.slice(),turn:S.turn=='w'?'b':'w',cs:{...S.cs},ep:-1,cap:{w:S.cap.w.slice(),b:S.cap.b.slice()},last:[v.f,v.t]};
+  const p=n.b[v.f];let q=n.b[v.t];
+  if(v.x=='ep'){const e=v.t+(p.c=='w'?8:-8);q=n.b[e];n.b[e]=null}
+  if(q)n.cap[p.c].push(q);
+  n.b[v.t]=p;n.b[v.f]=null;
+  if(p.t=='p'){
+    if(Math.abs(v.t-v.f)==16)n.ep=(v.f+v.t)/2;
+    const r=v.t>>3;if(r==0||r==7)n.b[v.t]={t:v.pr||'q',c:p.c};
+  }
+  if(v.x=='K'){n.b[v.t-1]=n.b[v.t+1];n.b[v.t+1]=null}
+  if(v.x=='Q'){n.b[v.t+1]=n.b[v.t-2];n.b[v.t-2]=null}
+  if(p.t=='k')n.cs[p.c+'K']=n.cs[p.c+'Q']=0;
+  for(const s of[v.f,v.t]){if(s==0)n.cs.bQ=0;if(s==7)n.cs.bK=0;if(s==56)n.cs.wQ=0;if(s==63)n.cs.wK=0}
+  return n;
+}
+const legal=(S,s)=>gen(S,s).filter(v=>!inCheck(mk(S,v).b,S.turn));
+const anyMove=S=>S.b.some((p,i)=>p&&p.c==S.turn&&legal(S,i).length);
+
+let S,plies,paid,pz=false,sel=null,moves=[],over=false,tout=null,rem,last=0,run=false;
+const $=id=>document.getElementById(id),bd=$('bd'),st=$('st');
+
+function newGame(){S=init();plies=0;paid=false;sel=null;moves=[];over=false;tout=null;rem={w:6e5,b:6e5};run=false;draw()}
+function tick(){if(!run||over)return;const n=Date.now();rem[S.turn]-=n-last;last=n;if(rem[S.turn]<=0){rem[S.turn]=0;tout=S.turn;run=false}}
+const fmt=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+
+function clk(){
+  for(const c of['w','b']){
+    const e=$(c=='w'?'tw':'tb'),act=c==S.turn&&!over;
+    e.textContent=(c=='w'?'Beyaz ':'Siyah ')+'⏱ '+fmt(rem[c]);
+    e.className='cb'+(act?' act':'')+(rem[c]<30000?' low':'');
+  }
+}
+
+function draw(){
+  bd.innerHTML='';
+  const chk=inCheck(S.b,S.turn),ki=S.b.findIndex(p=>p&&p.t=='k'&&p.c==S.turn);
+  for(let i=0;i<64;i++){
+    const d=document.createElement('div');
+    d.className='sq '+(((i>>3)+(i&7))%2?'d':'l');
+    if(S.last&&S.last.includes(i))d.classList.add('last');
+    if(i==sel)d.classList.add('sel');
+    if(chk&&i==ki)d.classList.add('chk');
+    const mv=moves.find(v=>v.t==i);
+    if(mv){d.classList.add('mv');if(S.b[i]||mv.x=='ep')d.classList.add('cp')}
+    const p=S.b[i];
+    if(p){const s=document.createElement('span');s.className=p.c;s.textContent=gl(p.t);d.appendChild(s)}
+    d.onclick=()=>click(i);
+    bd.appendChild(d);
+  }
+  const other=S.turn=='w'?'Siyah':'Beyaz';
+  if(tout){over=true;run=false;st.textContent=`Süre doldu! ${other} kazandı ⏱`}
+  else if(!anyMove(S)){over=true;run=false;st.textContent=chk?`Şah mat! ${other} kazandı 🎉`:'Pat! Oyun berabere.'}
+  else{over=false;st.textContent=`Sıra: ${S.turn=='w'?'Beyaz':'Siyah'}`+(chk?' (Şah!)':'')}
+  if(over&&!paid&&plies>=10){paid=true;D.pts+=20;save()}
+  if(over&&paid)st.textContent+=' · +20 ⭐';
+  $('pt').textContent=D.pts;
+  const f=a=>a.map(p=>`<span class="${p.c}">${gl(p.t)}</span>`).join('');
+  $('cw').innerHTML=f(S.cap.w);$('cbk').innerHTML=f(S.cap.b);
+  clk();
+}
+
+function click(i){
+  if(over)return;
+  const mv=moves.filter(v=>v.t==i);
+  if(sel!==null&&mv.length){
+    const p=S.b[sel];
+    if(p.t=='p'&&(i>>3==0||i>>3==7)){askPromo(p.c,t=>play({...mv[0],pr:t}));return}
+    play(mv[0]);return;
+  }
+  const p=S.b[i];
+  if(p&&p.c==S.turn){sel=i;moves=legal(S,i)}else{sel=null;moves=[]}
+  draw();
+}
+function play(v){
+  tick();const n=mk(S,v);plies++;
+  S=n;sel=null;moves=[];run=!tout;last=Date.now();draw();
+}
+
+function askPromo(c,cb){
+  const pr=$('pr'),pc=$('pc');pc.innerHTML='';
+  for(const t of['q','r','b','n']){
+    const s=document.createElement('span');s.className=c;s.textContent=gl(t);
+    s.onclick=()=>{pr.style.display='none';cb(t)};pc.appendChild(s);
+  }
+  pr.style.display='flex';
+}
+
+setInterval(()=>{
+  if(!run||over)return;
+  tick();
+  if(tout)draw();else clk();
+},200);
+$('shop').onclick=()=>{tick();pz=run;run=false;shop();$('sh').style.display='flex'};
+const closeShop=()=>{$('sh').style.display='none';if(pz&&!over){run=true;last=Date.now()}pz=false};
+$('shx').onclick=closeShop;$('sh').onclick=e=>{if(e.target.id=='sh')closeShop()};
+applySkin();
+$('nw').onclick=()=>{if(confirm('Yeni oyun başlasın mı?'))newGame()};
+newGame();
+</script>
+</body>
+</html>
