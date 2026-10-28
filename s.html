@@ -11,7 +11,9 @@ h1{margin:0;font-size:1.2rem;height:1.6rem;line-height:1.6rem}
 #wrap{--s:min(94vw,60vh,520px);width:var(--s);display:flex;flex-direction:column;gap:8px}
 #info,#clk,#cap{width:100%;display:flex;justify-content:space-between;align-items:center;gap:8px}
 #info{height:36px}
-#st{font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#info>span:last-child{display:flex;gap:6px;flex:none}
+button{white-space:nowrap}
+#st{flex:1;min-width:0;font-weight:600;font-size:1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #clk{height:40px}
 .cb{flex:1;text-align:center;padding:6px 4px;border-radius:6px;background:#2b2622;font-variant-numeric:tabular-nums;font-size:.95rem;white-space:nowrap}
 .cb.act{background:#5a4630;outline:2px solid #e0b060}
@@ -40,6 +42,7 @@ button:disabled{opacity:.5;cursor:default}
 #sh{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:5}
 #shb{background:#2b2622;border-radius:10px;padding:14px;width:min(94vw,460px);max-height:86vh;overflow-y:auto}
 #shh{display:flex;justify-content:space-between;align-items:center;gap:8px}
+#tabs{margin-top:8px;display:flex;gap:8px}
 .card{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;background:#1e1b18;margin-top:8px}
 .card .in{flex:1}.card small{color:#bbb}
 .pv{display:flex;font-size:28px;line-height:1}
@@ -52,12 +55,12 @@ button:disabled{opacity:.5;cursor:default}
   <div id="info"><span id="st"></span><span><button id="shop">⭐ <b id="pt">0</b> Mağaza</button> <button id="nw">Yeni Oyun</button></span></div>
   <div id="clk">
     <div class="cb" id="tw"></div>
-    <div class="cb" id="tb"></div>
+    <button id="mu">🔊</button><div class="cb" id="tb"></div>
   </div>
   <div id="cap"><span id="cw"></span><span id="cbk"></span></div>
   <div id="bd"></div>
 </div>
-<div id="sh"><div id="shb"><div id="shh"><b>Taş Kostümleri</b><span id="shp"></span><button id="shx">Kapat</button></div><div id="shl"></div></div></div>
+<div id="sh"><div id="shb"><div id="shh"><b>Taş Kostümleri</b><span id="shp"></span><button id="shx">Kapat</button></div><div id="tabs"><button id="t0">Taşlar</button> <button id="t1">Tahtalar</button></div><div id="shl"></div></div></div>
 <div id="pr"><div id="pc"></div></div>
 <script>
 const G={k:'♚',q:'♛',r:'♜',b:'♝',n:'♞',p:'♟'};
@@ -68,33 +71,65 @@ const ok=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
 const SK=[
 {id:'k',n:'Klasik',p:0},
 {id:'g',n:'Altın & Gümüş',p:60,l:'#e8e0d0',d:'#7d6b4f',wc:'#d8dde6',ws:'0 0 2px #000,0 0 3px #000',bc:'#e0a800',bs:'0 0 2px #3a2a00,0 0 3px #000'},
+{id:'z',n:'Zümrüt & Yakut',p:80,l:'#d9efe3',d:'#4c8a6a',wc:'#7dffb0',ws:'0 0 2px #043,0 0 4px #043',bc:'#ff4d6d',bs:'0 0 2px #400,0 0 4px #400'},
 {id:'i',n:'Buz & Ateş',p:100,l:'#cfe6f2',d:'#5f8aa6',wc:'#bfeaff',ws:'0 0 3px #035,0 0 5px #0af',bc:'#ff5a1f',bs:'0 0 3px #400,0 0 5px #f90'},
 {id:'n',n:'Neon',p:140,l:'#2a2540',d:'#17142a',wc:'#00f0ff',ws:'0 0 6px #00f0ff',bc:'#ff2bd6',bs:'0 0 6px #ff2bd6'},
 {id:'a',n:'Hayvanlar',p:200,e:1,g:{k:'🦁',q:'🦄',r:'🐘',b:'🦉',n:'🐴',p:'🐭'},l:'#cfe8b5',d:'#6f9a52'},
-{id:'u',n:'Uzay',p:260,e:1,g:{k:'👽',q:'🌟',r:'🚀',b:'🌙',n:'🛸',p:'☄️'},l:'#3b4a7a',d:'#1d2547'}];
-let D={pts:0,own:['k'],sk:'k'};
+{id:'u',n:'Uzay',p:260,e:1,g:{k:'👽',q:'🌟',r:'🚀',b:'🌙',n:'🛸',p:'☄️'},l:'#3b4a7a',d:'#1d2547'},
+{id:'o',n:'Okyanus',p:300,e:1,g:{k:'🐳',q:'🐙',r:'🦀',b:'🦈',n:'🐬',p:'🐟'},l:'#bfe6f5',d:'#3b86a8'},
+{id:'f',n:'Yemek',p:340,e:1,g:{k:'🍔',q:'🍕',r:'🍩',b:'🌭',n:'🍟',p:'🍪'},l:'#fff0c9',d:'#d99a4e'}];
+const BT=[
+{id:'k',n:'Klasik (kostüme göre)',p:0},
+{id:'y',n:'Turnuva Yeşili',p:50,l:'#eeeed2',d:'#769656'},
+{id:'m',n:'Mavi Okyanus',p:80,l:'#dee3e6',d:'#8ca2ad'},
+{id:'s',n:'Mermer Gri',p:120,l:'#e8e8e8',d:'#8a8a8a'},
+{id:'t',n:'Gece',p:160,l:'#8089a0',d:'#49536d'},
+{id:'p',n:'Şeker Pembe',p:200,l:'#fde2ec',d:'#e58aa8'}];
+let D={pts:0,own:['k'],sk:'k'},tab=0,ac;
 try{const x=JSON.parse(localStorage.getItem('satranc_v1'));if(x&&x.own)D=x}catch(e){}
+D.bown=D.bown||['k'];D.bt=D.bt||'k';
 const save=()=>{try{localStorage.setItem('satranc_v1',JSON.stringify(D))}catch(e){}};
 const cur=()=>SK.find(k=>k.id==D.sk)||SK[0];
-const gl=(t,k=cur())=>k.e?k.g[t]:G[t]+'\uFE0E';
-function paint(k,el){
-  const v={l:k.l||'#f0d9b5',d:k.d||'#b58863',wc:k.wc||'#fff',ws:k.ws||'0 0 2px #000,0 0 2px #000,0 0 3px #000',bc:k.bc||'#111',bs:k.bs||'0 0 1px #aaa'};
+const curB=()=>BT.find(k=>k.id==D.bt)||BT[0];
+const gl=(t,k=cur())=>k.g?k.g[t]+(k.e?'':'\uFE0E'):G[t]+'\uFE0E';
+function paint(k,el,bt){
+  const v={l:bt&&bt.l||k.l||'#f0d9b5',d:bt&&bt.d||k.d||'#b58863',wc:k.wc||'#fff',ws:k.ws||'0 0 2px #000,0 0 2px #000,0 0 3px #000',bc:k.bc||'#111',bs:k.bs||'0 0 1px #aaa'};
   for(const n in v)el.style.setProperty('--'+n,v[n]);
 }
-function applySkin(){paint(cur(),document.documentElement);document.body.classList.toggle('emo',!!cur().e)}
+function applySkin(){paint(cur(),document.documentElement,curB());document.body.classList.toggle('emo',!!cur().e)}
 function shop(){
   $('shp').textContent='⭐ '+D.pts;$('pt').textContent=D.pts;
+  $('t0').disabled=tab==0;$('t1').disabled=tab==1;
   const L=$('shl');L.innerHTML='';
-  for(const k of SK){
-    const own=D.own.includes(k.id),c=document.createElement('div');
-    c.className='card'+(k.e?' emo':'');paint(k,c);
-    c.innerHTML=`<div class="pv"><div class="l"><span class="w">${gl('k',k)}</span></div><div class="d"><span class="b">${gl('k',k)}</span></div></div><div class="in"><b>${k.n}</b><br><small>${own?'Sahipsin':'⭐ '+k.p}</small></div>`;
+  const list=tab?BT:SK,ow=tab?'bown':'own',key=tab?'bt':'sk';
+  for(const k of list){
+    const has=D[ow].includes(k.id),sk=tab?cur():k,c=document.createElement('div');
+    c.className='card'+(sk.e?' emo':'');paint(sk,c,tab?k:curB());
+    c.innerHTML=`<div class="pv"><div class="l"><span class="w">${gl('k',sk)}</span></div><div class="d"><span class="b">${gl('k',sk)}</span></div></div><div class="in"><b>${k.n}</b><br><small>${has?'Sahipsin':'⭐ '+k.p}</small></div>`;
     const b=document.createElement('button');
-    if(D.sk==k.id){b.textContent='Seçili';b.disabled=true}
-    else if(own){b.textContent='Seç';b.onclick=()=>{D.sk=k.id;save();applySkin();shop();draw()}}
-    else{b.textContent='Satın Al';b.disabled=D.pts<k.p;b.onclick=()=>{D.pts-=k.p;D.own.push(k.id);D.sk=k.id;save();applySkin();shop();draw()}}
+    if(D[key]==k.id){b.textContent='Seçili';b.disabled=true}
+    else if(has){b.textContent='Seç';b.onclick=()=>{D[key]=k.id;save();applySkin();shop();draw()}}
+    else{b.textContent='Satın Al';b.disabled=D.pts<k.p;b.onclick=()=>{D.pts-=k.p;D[ow].push(k.id);D[key]=k.id;save();applySkin();shop();draw()}}
     c.appendChild(b);L.appendChild(c);
   }
+}
+function snd(cap){
+  if(D.mute)return;
+  try{
+    ac=ac||new(window.AudioContext||window.webkitAudioContext)();
+    const t=ac.currentTime,o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g);g.connect(ac.destination);
+    if(cap){
+      const n=ac.createBuffer(1,ac.sampleRate*.12,ac.sampleRate),d=n.getChannelData(0);
+      for(let i=0;i<d.length;i++)d[i]=(Math.random()*2-1)*(1-i/d.length);
+      const r=ac.createBufferSource(),gg=ac.createGain();r.buffer=n;gg.gain.value=.5;r.connect(gg);gg.connect(ac.destination);r.start(t);
+      o.frequency.setValueAtTime(180,t);o.frequency.exponentialRampToValueAtTime(60,t+.15);
+      g.gain.setValueAtTime(.7,t);g.gain.exponentialRampToValueAtTime(.001,t+.18);o.start(t);o.stop(t+.2);
+    }else{
+      o.type='triangle';o.frequency.setValueAtTime(420,t);o.frequency.exponentialRampToValueAtTime(260,t+.06);
+      g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.001,t+.08);o.start(t);o.stop(t+.1);
+    }
+  }catch(e){}
 }
 function init(){
   const b=Array(64).fill(null),o='rnbqkbnr';
@@ -193,8 +228,8 @@ function draw(){
   if(tout){over=true;run=false;st.textContent=`Süre doldu! ${other} kazandı ⏱`}
   else if(!anyMove(S)){over=true;run=false;st.textContent=chk?`Şah mat! ${other} kazandı 🎉`:'Pat! Oyun berabere.'}
   else{over=false;st.textContent=`Sıra: ${S.turn=='w'?'Beyaz':'Siyah'}`+(chk?' (Şah!)':'')}
-  if(over&&!paid&&plies>=10){paid=true;D.pts+=20;save()}
-  if(over&&paid)st.textContent+=' · +20 ⭐';
+  if(over&&!paid&&plies>=10){paid=20+((tout||chk)?10:0);D.pts+=paid;save()}
+  if(over&&paid)st.textContent+=' · +'+paid+' ⭐';
   $('pt').textContent=D.pts;
   const f=a=>a.map(p=>`<span class="${p.c}">${gl(p.t)}</span>`).join('');
   $('cw').innerHTML=f(S.cap.w);$('cbk').innerHTML=f(S.cap.b);
@@ -214,7 +249,7 @@ function click(i){
   draw();
 }
 function play(v){
-  tick();const n=mk(S,v);plies++;
+  tick();snd(!!(S.b[v.t]||v.x=='ep'));const n=mk(S,v);plies++;
   S=n;sel=null;moves=[];run=!tout;last=Date.now();draw();
 }
 
@@ -234,6 +269,8 @@ setInterval(()=>{
 },200);
 $('shop').onclick=()=>{tick();pz=run;run=false;shop();$('sh').style.display='flex'};
 const closeShop=()=>{$('sh').style.display='none';if(pz&&!over){run=true;last=Date.now()}pz=false};
+$('t0').onclick=()=>{tab=0;shop()};$('t1').onclick=()=>{tab=1;shop()};
+$('mu').textContent=D.mute?'🔇':'🔊';$('mu').onclick=()=>{D.mute=!D.mute;save();$('mu').textContent=D.mute?'🔇':'🔊'};
 $('shx').onclick=closeShop;$('sh').onclick=e=>{if(e.target.id=='sh')closeShop()};
 applySkin();
 $('nw').onclick=()=>{if(confirm('Yeni oyun başlasın mı?'))newGame()};
