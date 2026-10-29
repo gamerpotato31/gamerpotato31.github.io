@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="tr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ornitorenk Macerası</title>
+<style>
+:root{--bg:#14211b;--fg:#f6edcf;--ac:#ffb347;--card:rgba(20,33,27,.88);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#14211b;--fg:#f6edcf;--ac:#ffb347;--card:rgba(20,33,27,.88)}}
+:root[data-theme="dark"]{--bg:#14211b;--fg:#f6edcf;--ac:#ffb347;--card:rgba(20,33,27,.88)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:Georgia,"Palatino Linotype",serif;overflow:hidden;touch-action:none;user-select:none}
+canvas{position:fixed;inset:0;display:block}
+#hud{position:fixed;left:12px;right:12px;top:calc(env(safe-area-inset-top,0px) + 10px);pointer-events:none}
+#obj{display:inline-block;background:var(--card);padding:9px 14px;border-radius:10px;font-size:17px;max-width:min(560px,100%);line-height:1.35}
+#bar{height:8px;width:min(280px,70%);background:rgba(0,0,0,.45);border-radius:5px;margin-top:8px;overflow:hidden;display:none}
+#bar i{display:block;height:100%;width:0;background:var(--ac)}
+#toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);font-size:26px;font-weight:bold;text-shadow:0 2px 8px #000;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center;width:90%}
+#flash{position:fixed;inset:0;background:#b3261e;opacity:0;pointer-events:none;transition:opacity .5s}
+#act{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:none;font:bold 22px Georgia,serif;padding:16px 26px;border-radius:14px;border:3px solid #fff3;background:var(--ac);color:#2b1a05;cursor:pointer}
+#joy{position:fixed;left:22px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);width:120px;height:120px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);display:none}
+#knob{position:absolute;left:35px;top:35px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.5)}
+@media (hover:none){#joy{display:block}}
+.ov{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,18,14,.8);padding:16px}
+.card{background:var(--card);border:1px solid #fff2;border-radius:16px;padding:26px 28px;max-width:460px;text-align:center}
+.card h1{margin:0 0 10px;font-size:32px}
+.card p{margin:8px 0;line-height:1.5;font-size:17px}
+.card button{margin-top:14px;font:bold 20px Georgia,serif;padding:12px 30px;border:0;border-radius:12px;background:var(--ac);color:#2b1a05;cursor:pointer}
+</style></head><body>
+<div id="hud"><div id="obj"></div><div id="bar"><i></i></div></div>
+<div id="toast"></div><div id="flash"></div>
+<button id="act"></button>
+<div id="joy"><div id="knob"></div></div>
+<div id="start" class="ov"><div class="card"><h1>Ornitorenk Macerası</h1>
+<p>Bataklıkta mor ornitorenklerden kaç, armut bahçesine ulaş, armutları topla ve kamp ateşinde pişirip ye. 5 bölüm var, her biri bir öncekinden zor.</p>
+<p>Çamurlu suda yavaşlarsın, dikkat et!</p>
+<p>WASD veya ok tuşları: hareket. E veya Boşluk: pişir ve ye. Telefonda sol alttaki daireyi kullan.</p>
+<button id="go">Başla</button></div></div>
+<div id="win" class="ov" style="display:none"><div class="card"><h1 id="wh"></h1><p id="wp"></p><button id="wb"></button></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id),rnd=(a,b)=>a+Math.random()*(b-a);
+const mat=(c,e)=>new THREE.MeshLambertMaterial({color:c,emissive:e||0});
+function mesh(g,c,x=0,y=0,z=0,e){const m=new THREE.Mesh(g,mat(c,e));m.position.set(x,y,z);return m}
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene(),skyCol=new THREE.Color(0x24382f);
+scene.background=skyCol.clone();scene.fog=new THREE.Fog(0x24382f,22,75);
+const cam=new THREE.PerspectiveCamera(60,innerWidth/innerHeight,.1,220);
+const hemi=new THREE.HemisphereLight(0xcfe3c8,0x2a3a22,.55);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xffe2b0,.55);sun.position.set(10,25,8);scene.add(sun);
+function ground(z0,z1,c){const m=new THREE.Mesh(new THREE.PlaneGeometry(64,Math.abs(z1-z0)),mat(c));m.rotation.x=-Math.PI/2;m.position.z=(z0+z1)/2;scene.add(m)}
+ground(16,-70,0x3d4a2c);ground(-70,-140,0x5a9a3a);ground(-140,-190,0x4f5b36);
+// seviyeler
+let TOTAL=4,L=0;
+const lv=new THREE.Group();scene.add(lv);let pools=[],pearList=[];
+const LV=[
+{n:'Sakin Bataklık',e:2,sp:2.2,r:5,pe:4,po:5,pr:2.6,sky:0x3a5a48,fog:90},
+{n:'Sisli Sazlık',e:4,sp:3.2,r:7,pe:6,po:8,pr:3.2,sky:0x2e473a,fog:75},
+{n:'Karanlık Bataklık',e:7,sp:4,r:9,pe:8,po:11,pr:3.8,sky:0x1f3329,fog:62},
+{n:'Öfkeli Sürü',e:10,sp:4.7,r:11,pe:10,po:13,pr:4.2,sky:0x182820,fog:52},
+{n:'Gece Avı',e:13,sp:5.3,r:13,pe:12,po:15,pr:4.6,sky:0x101c1a,fog:44}];
+const pt=[];
+function burst(x,y,z,n,col,vy,sc,g){for(let i=0;i<n;i++){const m=mesh(new THREE.SphereGeometry(sc,5,4),col,x,y,z);m.material.transparent=true;scene.add(m);pt.push({m,vx:rnd(-2,2),vy:rnd(1,vy),vz:rnd(-2,2),l:rnd(.5,1.1),g})}}
+const ffp=[];for(let i=0;i<80;i++)ffp.push(rnd(-26,26),rnd(.5,4),rnd(14,-68));
+const ffg=new THREE.BufferGeometry();ffg.setAttribute('position',new THREE.Float32BufferAttribute(ffp.slice(),3));
+scene.add(new THREE.Points(ffg,new THREE.PointsMaterial({color:0xd8ff6a,size:.38,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})));
+function build(n){L=n;const c=LV[n];TOTAL=c.pe;while(lv.children.length)lv.remove(lv.children[0]);
+ zc[0]=c.sky;scene.fog.near=Math.min(22,c.fog*.3);scene.fog.far=c.fog;
+ for(let i=0;i<16;i++){const m=mesh(new THREE.CircleGeometry(rnd(2,5),12),i%2?0x33401f:0x4a5630,rnd(-24,24),.015,rnd(12,-66));m.rotation.x=-Math.PI/2;lv.add(m)}
+ pools=[];for(let i=0;i<c.po;i++){const r=c.pr*rnd(.7,1.2),x=n?rnd(-19,19):(i%2?1:-1)*rnd(11,19),z=-6-i*62/c.po-rnd(0,3);pools.push({x,z,r});
+  const m=mesh(new THREE.CircleGeometry(r,28),0x2f7d7a,x,.03,z);m.rotation.x=-Math.PI/2;m.material.transparent=true;m.material.opacity=.85;lv.add(m);
+  for(let k=0;k<4;k++){const a=rnd(0,6.28),d=rnd(0,r*.8),p=mesh(new THREE.CircleGeometry(rnd(.4,.7),8),0x4f9a3a,x+Math.cos(a)*d,.05,z+Math.sin(a)*d);p.rotation.x=-Math.PI/2;lv.add(p)}}
+ for(let i=0;i<8+n*2;i++){const l=mesh(new THREE.CylinderGeometry(.35,.4,rnd(2.5,4.5),7),0x4a3320,rnd(-22,22),.3,rnd(8,-64));l.rotation.z=Math.PI/2;l.rotation.y=rnd(0,3);lv.add(l)}
+ for(let i=0;i<70+n*25;i++){const h=rnd(1.5,3.2),r=new THREE.Group();r.add(mesh(new THREE.CylinderGeometry(.04,.06,h,5),0x7a9a3a,0,h/2,0));
+  if(i%3==0)r.add(mesh(new THREE.CylinderGeometry(.12,.12,.5,6),0x5a3a1a,0,h,0));r.position.set(rnd(-28,28),0,rnd(14,-68));r.rotation.z=rnd(-.15,.15);lv.add(r)}
+ pearList=[];const ord=[0,2,4,6,8,10,1,3,5,7,9,11];
+ for(let i=0;i<TOTAL;i++){const q=pearSpots[ord[i]],g=pear();g.position.set(q.x,0,q.z);lv.add(g);pearList.push({g,taken:false})}
+ enemies.length=0;
+ for(let i=0;i<c.e;i++){const z=-14-i*(52/Math.max(1,c.e-1)),x=n?rnd(-(10+n*2.5),10+n*2.5):(i%2?1:-1)*rnd(12,18),g=platy(0x6b4f7a,0x8a8a30);
+  g.position.set(x,0,z);lv.add(g);enemies.push({g,hx:x,hz:z,tx:x,tz:z,chase:false})}
+ Object.assign(S,{won:false,pears:0,cooking:false,cooked:false,eaten:0,hit:0,jump:0,lives:3,eat:null});
+ roast.forEach(r=>fire.remove(r.g));roast.length=0;$('bar').style.display='none';
+ me.position.set(0,0,10);me.rotation.set(0,0,0);me.scale.set(1,1,1);hud();
+ if(S.go)toast(`Bölüm ${n+1}: ${c.n}`,2200)}
+function tree(x,z,s,leaf,hang){const g=new THREE.Group(),lc=new THREE.Color(leaf);
+ g.add(mesh(new THREE.CylinderGeometry(.3*s,.5*s,3*s,7),0x5a3d22,0,1.5*s,0));
+ for(let i=0;i<3;i++){const a=i*2.1,r=mesh(new THREE.BoxGeometry(.25*s,.2*s,1.2*s),0x5a3d22,Math.cos(a)*.5*s,.1,Math.sin(a)*.5*s);r.rotation.y=-a;g.add(r)}
+ [[0,3.6,0,1.9],[1,4.3,.3,1.4],[-.9,4.2,-.4,1.3],[.2,5.2,.1,1.1]].forEach(([a,b,c,d],i)=>g.add(mesh(new THREE.SphereGeometry(d*s,9,7),lc.clone().offsetHSL(0,0,i*.025).getHex(),a*s,b*s,c*s)));
+ if(hang)for(let i=0;i<9;i++){const a=rnd(0,6.28),h=pear();h.scale.setScalar(.8);h.position.set(Math.cos(a)*1.9*s,3.1*s+rnd(0,1.2),Math.sin(a)*1.9*s);g.add(h)}
+ g.position.set(x,0,z);scene.add(g);return g}
+for(let z=14;z>-188;z-=7){const leaf=z>-70?0x2a4a2a:z>-140?0x3f8a32:0x2f5a2a;
+ tree(-(28+rnd(0,2)),z+rnd(-2,2),rnd(1,1.4),leaf);tree(28+rnd(0,2),z+rnd(-2,2),rnd(1,1.4),leaf)}
+function pear(){const g=new THREE.Group(),a=mesh(new THREE.SphereGeometry(.45,10,8),0xc9d94a,0,.45,0,0x2a3000),b=mesh(new THREE.SphereGeometry(.3,10,8),0xc9d94a,0,.95,0,0x2a3000);
+ g.add(a,b,mesh(new THREE.CylinderGeometry(.03,.03,.3,4),0x5a3d22,0,1.3,0));g.userData.m=[a.material,b.material];return g}
+function platy(col,bill){const g=new THREE.Group();
+ const body=mesh(new THREE.SphereGeometry(1,16,12),col,0,.75,0);body.scale.set(.8,.6,1.2);g.add(body);
+ g.add(mesh(new THREE.BoxGeometry(.75,.12,.85),bill,0,.7,-1.4));
+ const tail=mesh(new THREE.BoxGeometry(.6,.1,1.1),col,0,.55,1.55);tail.rotation.x=-.15;g.add(tail);
+ for(const s of[-1,1]){g.add(mesh(new THREE.SphereGeometry(.12,8,6),0xffffff,.3*s,1.05,-.85));g.add(mesh(new THREE.SphereGeometry(.06,6,5),0x111111,.33*s,1.06,-.95));
+  for(const z of[-.6,.6])g.add(mesh(new THREE.BoxGeometry(.3,.12,.45),bill,.55*s,.1,z))}
+ scene.add(g);return g}
+// armut ağaçları
+const pearSpots=[];
+[[-14,-80],[12,-88],[-9,-100],[14,-110],[-13,-120],[8,-130]].forEach(([x,z])=>{tree(x,z,1.6,0x3f9a32,true);for(let j=0;j<2;j++){const a=rnd(0,6.28),d=rnd(3.4,4.6);pearSpots.push({x:x+Math.cos(a)*d,z:z+Math.sin(a)*d})}});
+// kamp
+const fire=new THREE.Group();fire.position.set(0,0,-165);scene.add(fire);
+for(let i=0;i<3;i++){const l=mesh(new THREE.CylinderGeometry(.18,.18,2.2,6),0x4a2e17,0,.3,0);l.rotation.z=Math.PI/2;l.rotation.y=i*Math.PI/3;fire.add(l)}
+for(let i=0;i<10;i++){const a=i/10*6.283;fire.add(mesh(new THREE.SphereGeometry(.35,6,5),0x777777,Math.cos(a)*1.7,.2,Math.sin(a)*1.7))}
+const flames=[0xff5a1a,0xff9a2a,0xffd84a].map((c,i)=>{const f=mesh(new THREE.ConeGeometry(.75-i*.2,1.9-i*.35,8),c,0,.95-i*.1,0);f.material.transparent=true;f.material.opacity=.9;fire.add(f);return f});
+const fl=new THREE.PointLight(0xff8a3a,2,34);fl.position.set(0,2.2,0);fire.add(fl);
+const tent=mesh(new THREE.ConeGeometry(3.2,3.4,4),0xc96a3a,-10,1.7,-171);tent.rotation.y=Math.PI/4;scene.add(tent);
+for(const s of[-4,4]){const l=mesh(new THREE.CylinderGeometry(.5,.5,1.8,8),0x6a4a2a,s,.5,-162);l.rotation.z=Math.PI/2;scene.add(l)}
+const sp=[];for(let i=0;i<260;i++)sp.push(rnd(-90,90),rnd(25,70),rnd(-120,-210));
+const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32BufferAttribute(sp,3));
+scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.6,fog:false})));
+// oyuncu ve düşmanlar
+const me=platy(0x8a5a3a,0xf0a040);me.position.set(0,0,10);
+const enemies=[];
+function step(g,tx,tz,s,dt){const dx=tx-g.position.x,dz=tz-g.position.z,d=Math.hypot(dx,dz);
+ if(d>.05){const m=Math.min(s*dt,d);g.position.x+=dx/d*m;g.position.z+=dz/d*m;
+  let da=Math.atan2(-dx,-dz)-g.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));g.rotation.y+=da*Math.min(1,dt*10)}}
+// durum
+const S={go:false,won:false,pears:0,cooking:false,cookT:0,cooked:false,eaten:0,hit:0,jump:0,near:false,lives:3,eat:null,final:false};
+const roast=[];let toastT;
+function toast(t,ms=1100){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>e.style.opacity=0,ms)}
+function zone(){const z=me.position.z;return z>-70?0:z>-140?1:2}
+function hud(){let t;const z=zone();
+ if(S.eaten>0)t=`Kalan armut: ${TOTAL-S.eaten}. Yemeye devam et!`;
+ else if(S.cooked)t='Armutlar pişti! Ateşe yaklaş ve ye.';
+ else if(S.cooking)t='Armutlar kamp ateşinde pişiyor…';
+ else if(S.pears===TOTAL)t='Tüm armutlar tamam! Kamp ateşine git ve pişir.';
+ else if(z===0)t='Bataklıktan kaç! Mor ornitorenklere yakalanma, armut bahçesine ulaş.';
+ else if(z===1)t=`Armut topla: ${S.pears}/${TOTAL}`;
+ else t=`Önce tüm armutları topla (${S.pears}/${TOTAL}), sonra ateşe dön.`;
+ $('obj').textContent=`Bölüm ${L+1}${L?'  '+'❤'.repeat(Math.max(0,S.lives)):''} · `+t}
+function startCook(){S.cooking=true;S.cookT=0;$('bar').style.display='block';
+ for(let i=0;i<TOTAL;i++){const g=new THREE.Group(),st=mesh(new THREE.CylinderGeometry(.04,.04,3,5),0x7a5a30,2.2,1,0);st.rotation.z=Math.PI/2-.3;g.add(st);
+  const pr=pear();pr.scale.setScalar(.75);pr.position.set(1,.75,0);g.add(pr);g.rotation.y=i/TOTAL*6.283;fire.add(g);roast.push({g,pr})}
+ hud()}
+function action(){if(!S.go||S.won||!S.near||S.eat)return;
+ if(!S.cooked&&!S.cooking&&S.pears===TOTAL)startCook();
+ else if(S.cooked&&roast.length){const r=roast.pop();fire.remove(r.g);const h=pear();h.position.set(0,.55,-1.75);h.scale.setScalar(.9);
+  h.userData.m.forEach(m=>{m.color.set(0x8a4a1a);m.emissive.set(0x220a00)});me.add(h);S.eat={t:0,h,b:0}}}
+function done(){S.won=true;const f=L===LV.length-1;S.final=f;
+ $('wh').textContent=f?'Efsane ornitorenk!':`Bölüm ${L+1} tamam!`;
+ $('wp').textContent=f?'Beş bölümün hepsini bitirdin, bataklığın en cesur ornitorenkisin. Afiyet olsun!':`Karnın doydu. Sıradaki: ${LV[L+1].n}. Ornitorenkler biraz daha hızlı ve çok olacak!`;
+ $('wb').textContent=f?'Baştan oyna':'Sonraki bölüm';$('win').style.display='flex'}
+$('wb').onclick=()=>{if(S.final)location.reload();else{$('win').style.display='none';build(L+1)}};
+function caught(){S.hit=1.2;$('flash').style.opacity=.6;setTimeout(()=>$('flash').style.opacity=0,350);
+ if(L>0){S.lives--;if(S.lives<=0){toast('Canın bitti! Bölüm baştan başlıyor',1800);build(L);return}}
+ toast('Yakalandın! Başa dönüyorsun');me.position.set(0,0,10);hud();
+ for(const e of enemies){e.g.position.set(e.hx,0,e.hz);e.tx=e.hx;e.tz=e.hz;e.chase=false}}
+// girdi
+const keys={};let jx=0,jz=0;
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();keys[k]=true;if(k==='e'||k===' '||k==='enter'){action();e.preventDefault()}});
+addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
+$('act').addEventListener('pointerdown',e=>{e.preventDefault();action()});
+const joy=$('joy'),knob=$('knob');
+function jm(e){const r=joy.getBoundingClientRect(),dx=e.clientX-(r.left+60),dy=e.clientY-(r.top+60),d=Math.min(50,Math.hypot(dx,dy)),a=Math.atan2(dy,dx);
+ jx=Math.cos(a)*d/50;jz=Math.sin(a)*d/50;knob.style.left=35+jx*40+'px';knob.style.top=35+jz*40+'px'}
+joy.addEventListener('pointerdown',e=>{joy.setPointerCapture(e.pointerId);jm(e)});
+joy.addEventListener('pointermove',e=>{if(e.buttons||e.pressure)jm(e)});
+const jend=()=>{jx=jz=0;knob.style.left=knob.style.top='35px'};
+joy.addEventListener('pointerup',jend);joy.addEventListener('pointercancel',jend);
+$('go').onclick=()=>{$('start').style.display='none';S.go=true;hud();toast(`Bölüm 1: ${LV[0].n}`,2200)};
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+// döngü
+const clock=new THREE.Clock(),zc=[0x24382f,0x9ccfe0,0x2a2038],zh=[.55,1,.4];let lastZ=-1;
+function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.05),t=clock.elapsedTime;
+ const z=zone();if(z!==lastZ){lastZ=z;hud()}
+ skyCol.lerp(new THREE.Color(zc[z]),.03);scene.background.copy(skyCol);scene.fog.color.copy(skyCol);hemi.intensity+=(zh[z]-hemi.intensity)*.03;
+ flames.forEach((f,i)=>{f.scale.y=1+Math.sin(t*10+i*2)*.18;f.scale.x=f.scale.z=1+Math.sin(t*13+i)*.08});fl.intensity=2+Math.random()*.7;
+ pearList.forEach((p,i)=>{if(!p.taken){p.g.position.y=.15+Math.sin(t*3+i)*.12;p.g.rotation.y=t+i}});
+ const P=me.position,fa=ffg.attributes.position;
+ for(let i=0;i<80;i++){fa.setX(i,ffp[i*3]+Math.cos(t*.8+i)*.8);fa.setY(i,ffp[i*3+1]+Math.sin(t*1.5+i)*.5)}fa.needsUpdate=true;
+ for(let i=pt.length-1;i>=0;i--){const q=pt[i];q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.vy-=q.g*dt;q.l-=dt;q.m.material.opacity=Math.min(1,q.l*2);if(q.l<=0){scene.remove(q.m);pt.splice(i,1)}}
+ if(Math.random()<.4)burst(rnd(-.4,.4),1.4,-165+rnd(-.4,.4),1,0xffb040,4,.05,3);
+ if(S.eat){const E=S.eat;E.t+=dt;const k=E.t/1.3,b=Math.min(3,Math.floor(k*4));
+  if(b>E.b){E.b=b;burst(P.x,.9,P.z-1.7,9,0xa86a2a,3.5,.07,9)}
+  const tg=.9*(1-E.b*.3);E.h.scale.setScalar(E.h.scale.x+(tg-E.h.scale.x)*.3);
+  me.rotation.x=-Math.abs(Math.sin(E.t*25))*.1;me.scale.x=1+Math.sin(E.t*22)*.05;
+  if(k>=1){me.remove(E.h);me.rotation.x=0;me.scale.set(1,1,1);S.eaten++;S.jump=.45;burst(P.x,2,P.z,8,0xff6a9a,3,.13,-1);
+   toast(['Nefis!','Çok lezzetli!','Mmm, tatlı!','Daha var!'][S.eaten%4]);S.eat=null;hud();if(S.eaten===TOTAL)setTimeout(done,700)}}
+
+ if(S.go&&!S.won){
+  const p=me.position;let ix=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0)+jx,iz=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0)+jz;
+  const m=Math.hypot(ix,iz);if(m>1){ix/=m;iz/=m}
+  const wet=pools.some(q=>Math.hypot(p.x-q.x,p.z-q.z)<q.r),spd=wet?3.4:6;
+  if(m>.1&&!S.eat){step(me,p.x+ix*10,p.z+iz*10,spd*Math.min(1,m),dt);me.rotation.z=Math.sin(t*14)*.09}else me.rotation.z=0;
+  p.x=Math.max(-25,Math.min(25,p.x));p.z=Math.max(-182,Math.min(14,p.z));
+  S.jump=Math.max(0,S.jump-dt);p.y=S.jump>0?Math.sin(S.jump/.45*Math.PI)*1.2:(m>.1?Math.abs(Math.sin(t*14))*.07:0)-(wet?.12:0);
+  S.hit=Math.max(0,S.hit-dt);
+  for(const e of enemies){const g=e.g.position,d=Math.hypot(p.x-g.x,p.z-g.z);e.chase=d<(e.chase?LV[L].r+5:LV[L].r);
+   if(e.chase)step(e.g,p.x,p.z,LV[L].sp,dt);else{if(Math.hypot(e.tx-g.x,e.tz-g.z)<.6){e.tx=e.hx+rnd(-6,6);e.tz=e.hz+rnd(-5,5)}step(e.g,e.tx,e.tz,1.2+L*.3,dt)}
+   e.g.position.y=Math.abs(Math.sin(t*10+e.hx))*.05;
+   if(!S.hit&&d<1.8)caught()}
+  for(const q of pearList)if(!q.taken&&Math.hypot(p.x-q.g.position.x,p.z-q.g.position.z)<1.8){q.taken=true;lv.remove(q.g);S.pears++;toast(`+1 armut (${S.pears}/${TOTAL})`,700);hud()}
+  S.near=Math.hypot(p.x-fire.position.x,p.z-fire.position.z)<6;
+  if(S.cooking){S.cookT+=dt;const k=Math.min(1,S.cookT/4);$('bar').firstChild.style.width=k*100+'%';
+   roast.forEach(r=>r.pr.userData.m.forEach(mm=>mm.color.set(0xc9d94a).lerp(new THREE.Color(0x7a3e14),k)));
+   if(k>=1){S.cooking=false;S.cooked=true;$('bar').style.display='none';toast('Armutlar pişti!');hud()}}
+  let lab='';if(S.near){if(!S.cooked&&!S.cooking&&S.pears===TOTAL)lab='Pişir';else if(S.cooked&&roast.length&&!S.eat)lab=`Ye (${roast.length})`}
+  $('act').style.display=lab?'block':'none';$('act').textContent=lab;
+  if(S.near&&!S.cooked&&!S.cooking&&S.pears<TOTAL&&Math.random()<.01)toast(`Önce ${TOTAL-S.pears} armut daha topla`,900)}
+ cam.position.x+=(me.position.x-cam.position.x)*Math.min(1,dt*5);cam.position.y+=((S.eat?5:9)-cam.position.y)*Math.min(1,dt*4);cam.position.z+=(me.position.z+(S.eat?6:11)-cam.position.z)*Math.min(1,dt*5);
+ cam.lookAt(cam.position.x,S.eat?.8:0,cam.position.z-(S.eat?6:12));
+ renderer.render(scene,cam)}
+build(0);loop();
+</script></body></html>
