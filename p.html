@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="tr"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
 <title>TURBO PARK</title>
 <style>
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;overflow:hidden;background:#222;font-family:Arial,Helvetica,sans-serif;user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#222;font-family:Arial,Helvetica,sans-serif;user-select:none;-webkit-user-select:none;touch-action:none}
 canvas#c{display:block;width:100%;height:100%}
 #hud{position:fixed;inset:0;pointer-events:none;color:#fff;text-shadow:0 2px 4px #000a}
 #stars{position:absolute;left:16px;top:14px;font-size:28px;font-weight:bold}
@@ -17,9 +17,9 @@ canvas#c{display:block;width:100%;height:100%}
 #race{position:absolute;left:50%;top:12px;transform:translateX(-50%);font-size:22px;font-weight:bold;text-align:center}
 #toast{position:absolute;left:50%;top:80px;transform:translateX(-50%);font-size:26px;font-weight:bold;color:#ffd84a;opacity:0;transition:opacity .3s;white-space:nowrap}
 #big{position:absolute;left:50%;top:38%;transform:translate(-50%,-50%);font-size:110px;font-weight:bold;color:#fff}
-#top{position:fixed;right:14px;top:12px;display:flex;gap:8px}
+#top{position:fixed;right:14px;top:12px;display:flex;gap:8px;z-index:100}
 #top button{padding:10px 14px;font-size:15px;font-weight:bold;border:0;border-radius:12px;background:#ff8a1f;color:#fff;cursor:pointer}
-#garage{position:fixed;inset:auto 0 0 0;display:none;padding:16px;text-align:center;color:#fff;background:linear-gradient(transparent,#000b 45%)}
+#garage{position:fixed;inset:auto 0 0 0;display:none;padding:16px;text-align:center;color:#fff;background:linear-gradient(transparent,#000b 45%);z-index:100}
 #garage h2{margin:0 0 4px;font-size:32px}
 #garage .row{display:flex;gap:8px;justify-content:center;align-items:center;flex-wrap:wrap;margin:8px 0}
 .bar{width:130px;height:10px;background:#fff3;border-radius:5px;overflow:hidden;display:inline-block;vertical-align:middle}
@@ -34,6 +34,14 @@ button.b.o{background:#ff8a1f}button.b:disabled{background:#777}
 #vs{position:absolute;left:50%;top:0;bottom:0;width:4px;margin-left:-2px;background:#fff}
 body.sp #speed2,body.sp #nit2,body.sp #race2,body.sp #vs{display:block}
 body.sp #race{left:25%}body.sp #speed{right:52%}body.sp #nit{right:52%}body.sp #mm,body.sp #hint{display:none}
+
+/* MOBİL DOKUNMATİK KONTROL STİLLERİ */
+#mob-controls{position:fixed;inset:0;pointer-events:none;z-index:90;display:flex;justify-content:space-between;align-items:flex-end;padding:20px}
+.mob-group{display:flex;gap:12px;pointer-events:auto}
+.mbtn{width:65px;height:65px;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);border-radius:50%;color:white;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mbtn:active,.mbtn.active{background:rgba(255,255,255,0.5)}
+#mob-top-actions{position:fixed;left:16px;top:60px;display:flex;flex-direction:column;gap:8px;z-index:100}
+#mob-top-actions button{padding:8px 12px;font-size:13px;font-weight:bold;border:0;border-radius:10px;background:rgba(0,0,0,0.6);color:#fff;border:1px solid rgba(255,255,255,0.3)}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud">
@@ -43,6 +51,25 @@ body.sp #race{left:25%}body.sp #speed{right:52%}body.sp #nit{right:52%}body.sp #
  <div id="hint">W/S gaz-fren · A/D direksiyon · Boşluk el freni · Shift nitro · R sıfırla · C kamera · N gün/gece · T mod · F şehir/park · G garaj</div>
 </div>
 <div id="top"><button id="mbtn">🏁 Pist modu</button><button id="sbtn">👥 2 Oyuncu</button><button id="gbtn">🏪 Garaj</button></div>
+
+<!-- MOBİL KONTROL ARAYÜZÜ -->
+<div id="mob-top-actions">
+ <button id="btn-cam">📷 Kamera</button>
+ <button id="btn-nit">🚀 Nitro</button>
+ <button id="btn-hb">🛑 El Freni</button>
+ <button id="btn-rst">🔄 Sıfırla</button>
+</div>
+<div id="mob-controls">
+ <div class="mob-group">
+  <div class="mbtn" id="b-left">◀</div>
+  <div class="mbtn" id="b-right">▶</div>
+ </div>
+ <div class="mob-group">
+  <div class="mbtn" id="b-down">▼</div>
+  <div class="mbtn" id="b-up">▲</div>
+ </div>
+</div>
+
 <div id="garage">
  <h2 id="gname"></h2><div id="gprice"></div>
  <div class="row">Hız <span class="bar"><i id="s1"></i></span> Hızlanma <span class="bar"><i id="s2"></i></span> Tutuş <span class="bar"><i id="s3"></i></span></div>
@@ -269,6 +296,26 @@ addEventListener('keydown',e=>{keys[e.code]=true;
   if(e.code=='KeyF'&&mode==0){spawn=1-spawn;resetAll();toast(spawn?'Fantezi şehir 🏙️':'Park')}}
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.code))e.preventDefault()});
 addEventListener('keyup',e=>keys[e.code]=false);
+
+// MOBİL DOKUNMATİK OLAY BİNDLEMELERİ
+function bindMob(id, code){
+ const el=$(id); if(!el) return;
+ const press = e => { e.preventDefault(); keys[code]=true; el.classList.add('active'); };
+ const release = e => { e.preventDefault(); keys[code]=false; el.classList.remove('active'); };
+ el.addEventListener('touchstart', press, {passive:false});
+ el.addEventListener('touchend', release, {passive:false});
+ el.addEventListener('touchcancel', release, {passive:false});
+ el.addEventListener('mousedown', press);
+ el.addEventListener('mouseup', release);
+}
+bindMob('b-left','KeyA'); bindMob('b-right','KeyD');
+bindMob('b-up','KeyW'); bindMob('b-down','KeyS');
+
+$('btn-nit').onclick = () => { keys['ShiftLeft'] = true; setTimeout(() => keys['ShiftLeft'] = false, 400); };
+$('btn-hb').onclick = () => { keys['Space'] = true; setTimeout(() => keys['Space'] = false, 300); };
+$('btn-rst').onclick = () => resetP(0);
+$('btn-cam').onclick = () => camMode = (camMode + 1) % 3;
+
 function showCar(){
  const d=CARS[view],o=save.owned.includes(view);
  $('gname').textContent=d.n;$('gprice').textContent=o?(save.sel==view?'✔ Seçili araba':'Sahipsin'):'⭐ '+d.p+' yıldız';
