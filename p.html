@@ -35,13 +35,24 @@ button.b.o{background:#ff8a1f}button.b:disabled{background:#777}
 body.sp #speed2,body.sp #nit2,body.sp #race2,body.sp #vs{display:block}
 body.sp #race{left:25%}body.sp #speed{right:52%}body.sp #nit{right:52%}body.sp #mm,body.sp #hint{display:none}
 
-/* MOBİL DOKUNMATİK KONTROL STİLLERİ */
-#mob-controls{position:fixed;inset:0;pointer-events:none;z-index:90;display:flex;justify-content:space-between;align-items:flex-end;padding:20px}
-.mob-group{display:flex;gap:12px;pointer-events:auto}
-.mbtn{width:65px;height:65px;background:rgba(255,255,255,0.2);border:2px solid rgba(255,255,255,0.4);border-radius:50%;color:white;font-size:22px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.mbtn:active,.mbtn.active{background:rgba(255,255,255,0.5)}
-#mob-top-actions{position:fixed;left:16px;top:60px;display:flex;flex-direction:column;gap:8px;z-index:100}
-#mob-top-actions button{padding:8px 12px;font-size:13px;font-weight:bold;border:0;border-radius:10px;background:rgba(0,0,0,0.6);color:#fff;border:1px solid rgba(255,255,255,0.3)}
+/* MOBİL KONTROL STİLLERİ */
+.mob-ui{position:fixed;inset:0;pointer-events:none;z-index:90}
+.mob-group{position:absolute;bottom:15px;display:flex;gap:8px;pointer-events:auto}
+.mbtn{width:54px;height:54px;background:rgba(255,255,255,0.22);border:2px solid rgba(255,255,255,0.5);border-radius:50%;color:white;font-size:20px;font-weight:bold;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.mbtn:active,.mbtn.active{background:rgba(255,255,255,0.6)}
+#mob-top-actions{position:fixed;left:16px;top:60px;display:flex;gap:6px;z-index:100;pointer-events:auto}
+#mob-top-actions button{padding:6px 10px;font-size:12px;font-weight:bold;border:0;border-radius:8px;background:rgba(0,0,0,0.6);color:#fff;border:1px solid rgba(255,255,255,0.3)}
+
+/* 1. OYUNCU BUTONLARI (TEK OYUNCU İÇİN SAĞ-SOL KÖŞE, 2 OYUNCUDA SOL EKRANA SIĞAR) */
+#p1-steer{left:12px}
+#p1-acc{right:12px}
+body.sp #p1-acc{right:calc(50% + 12px)}
+
+/* 2. OYUNCU BUTONLARI (SADECE 2 OYUNCULU MODDA SAĞ TARAFTA GÖRÜNÜR) */
+#p2-controls{display:none}
+body.sp #p2-controls{display:block}
+#p2-steer{left:calc(50% + 12px)}
+#p2-acc{right:12px}
 </style></head><body>
 <canvas id="c"></canvas>
 <div id="hud">
@@ -52,21 +63,34 @@ body.sp #race{left:25%}body.sp #speed{right:52%}body.sp #nit{right:52%}body.sp #
 </div>
 <div id="top"><button id="mbtn">🏁 Pist modu</button><button id="sbtn">👥 2 Oyuncu</button><button id="gbtn">🏪 Garaj</button></div>
 
-<!-- MOBİL KONTROL ARAYÜZÜ -->
+<!-- MOBİL KONTROLLER -->
 <div id="mob-top-actions">
  <button id="btn-cam">📷 Kamera</button>
  <button id="btn-nit">🚀 Nitro</button>
- <button id="btn-hb">🛑 El Freni</button>
  <button id="btn-rst">🔄 Sıfırla</button>
 </div>
-<div id="mob-controls">
- <div class="mob-group">
-  <div class="mbtn" id="b-left">◀</div>
-  <div class="mbtn" id="b-right">▶</div>
+
+<div class="mob-ui">
+ <!-- 1. Oyuncu Dokunmatik Butonları -->
+ <div class="mob-group" id="p1-steer">
+  <div class="mbtn" id="b1-l">◀</div>
+  <div class="mbtn" id="b1-r">▶</div>
  </div>
- <div class="mob-group">
-  <div class="mbtn" id="b-down">▼</div>
-  <div class="mbtn" id="b-up">▲</div>
+ <div class="mob-group" id="p1-acc">
+  <div class="mbtn" id="b1-d">▼</div>
+  <div class="mbtn" id="b1-u">▲</div>
+ </div>
+
+ <!-- 2. Oyuncu Dokunmatik Butonları (Ekranın Sağ Yarısında Açılır) -->
+ <div id="p2-controls">
+  <div class="mob-group" id="p2-steer">
+   <div class="mbtn" id="b2-l">◀</div>
+   <div class="mbtn" id="b2-r">▶</div>
+  </div>
+  <div class="mob-group" id="p2-acc">
+   <div class="mbtn" id="b2-d">▼</div>
+   <div class="mbtn" id="b2-u">▲</div>
+  </div>
  </div>
 </div>
 
@@ -297,7 +321,7 @@ addEventListener('keydown',e=>{keys[e.code]=true;
  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter'].includes(e.code))e.preventDefault()});
 addEventListener('keyup',e=>keys[e.code]=false);
 
-// MOBİL DOKUNMATİK OLAY BİNDLEMELERİ
+// DOKUNMATİK EŞLEŞTİRMELER (1. OYUNCU: W,A,S,D / 2. OYUNCU: OK TUŞLARI)
 function bindMob(id, code){
  const el=$(id); if(!el) return;
  const press = e => { e.preventDefault(); keys[code]=true; el.classList.add('active'); };
@@ -308,12 +332,17 @@ function bindMob(id, code){
  el.addEventListener('mousedown', press);
  el.addEventListener('mouseup', release);
 }
-bindMob('b-left','KeyA'); bindMob('b-right','KeyD');
-bindMob('b-up','KeyW'); bindMob('b-down','KeyS');
+
+// Oyuncu 1 Butonları
+bindMob('b1-l','KeyA'); bindMob('b1-r','KeyD');
+bindMob('b1-u','KeyW'); bindMob('b1-d','KeyS');
+
+// Oyuncu 2 Butonları
+bindMob('b2-l','ArrowLeft'); bindMob('b2-r','ArrowRight');
+bindMob('b2-u','ArrowUp'); bindMob('b2-d','ArrowDown');
 
 $('btn-nit').onclick = () => { keys['ShiftLeft'] = true; setTimeout(() => keys['ShiftLeft'] = false, 400); };
-$('btn-hb').onclick = () => { keys['Space'] = true; setTimeout(() => keys['Space'] = false, 300); };
-$('btn-rst').onclick = () => resetP(0);
+$('btn-rst').onclick = () => resetAll();
 $('btn-cam').onclick = () => camMode = (camMode + 1) % 3;
 
 function showCar(){
