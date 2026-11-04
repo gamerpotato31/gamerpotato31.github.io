@@ -12,6 +12,7 @@ canvas{position:fixed;inset:0;display:block}
 #obj{display:inline-block;background:var(--card);padding:9px 14px;border-radius:10px;font-size:17px;max-width:min(560px,100%);line-height:1.35}
 #bar{height:8px;width:min(280px,70%);background:rgba(0,0,0,.45);border-radius:5px;margin-top:8px;overflow:hidden;display:none}
 #bar i{display:block;height:100%;width:0;background:var(--ac)}
+#fx{margin-top:8px;font-size:18px;font-weight:bold;text-shadow:0 2px 6px #000}
 #toast{position:fixed;left:50%;top:38%;transform:translateX(-50%);font-size:26px;font-weight:bold;text-shadow:0 2px 8px #000;opacity:0;transition:opacity .25s;pointer-events:none;text-align:center;width:90%}
 #flash{position:fixed;inset:0;background:#b3261e;opacity:0;pointer-events:none;transition:opacity .5s}
 #act{position:fixed;right:18px;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);display:none;font:bold 22px Georgia,serif;padding:16px 26px;border-radius:14px;border:3px solid #fff3;background:var(--ac);color:#2b1a05;cursor:pointer}
@@ -24,15 +25,15 @@ canvas{position:fixed;inset:0;display:block}
 .card p{margin:8px 0;line-height:1.5;font-size:17px}
 .card button{margin-top:14px;font:bold 20px Georgia,serif;padding:12px 30px;border:0;border-radius:12px;background:var(--ac);color:#2b1a05;cursor:pointer}
 </style></head><body>
-<div id="hud"><div id="obj"></div><div id="bar"><i></i></div></div>
+<div id="hud"><div id="obj"></div><div id="bar"><i></i></div><div id="fx"></div></div>
 <div id="toast"></div><div id="flash"></div>
 <button id="act"></button>
 <div id="joy"><div id="knob"></div></div>
 <div id="start" class="ov"><div class="card"><h1>Ornitorenk Macerası</h1>
-<p>Bataklıkta mor ornitorenklerden kaç, armut bahçesine ulaş, armutları topla ve kamp ateşinde pişirip ye. 5 bölüm var, her biri bir öncekinden zor.</p>
-<p>Çamurlu suda yavaşlarsın, dikkat et!</p>
+<p>Bataklıkta mor ornitorenklerden kaç, armut bahçesine ulaş, armutları topla ve kamp ateşinde pişirip ye. 100 bölüm var, her biri bir öncekinden zor.</p>
+<p>Çamurlu suda yavaşlarsın, dikkat et! Bataklıkta yeşil zehirli armutu yersen osssssssssurup 7 saniye uçarsın, mavi kalkanı bulursan 7 saniye boyunca yakalanmazsın.</p>
 <p>WASD veya ok tuşları: hareket. E veya Boşluk: pişir ve ye. Telefonda sol alttaki daireyi kullan.</p>
-<button id="go">Başla</button></div></div>
+<button id="go">Başla</button> <button id="cont" style="display:none;margin-left:8px"></button></div></div>
 <div id="win" class="ov" style="display:none"><div class="card"><h1 id="wh"></h1><p id="wp"></p><button id="wb"></button></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
@@ -51,18 +52,27 @@ function ground(z0,z1,c){const m=new THREE.Mesh(new THREE.PlaneGeometry(64,Math.
 ground(16,-70,0x3d4a2c);ground(-70,-140,0x5a9a3a);ground(-140,-190,0x4f5b36);
 // seviyeler
 let TOTAL=4,L=0;
-const lv=new THREE.Group();scene.add(lv);let pools=[],pearList=[];
+const lv=new THREE.Group();scene.add(lv);let pools=[],pearList=[],items=[];
 const LV=[
 {n:'Sakin Bataklık',e:2,sp:2.2,r:5,pe:4,po:5,pr:2.6,sky:0x3a5a48,fog:90},
 {n:'Sisli Sazlık',e:4,sp:3.2,r:7,pe:6,po:8,pr:3.2,sky:0x2e473a,fog:75},
 {n:'Karanlık Bataklık',e:7,sp:4,r:9,pe:8,po:11,pr:3.8,sky:0x1f3329,fog:62},
 {n:'Öfkeli Sürü',e:10,sp:4.7,r:11,pe:10,po:13,pr:4.2,sky:0x182820,fog:52},
 {n:'Gece Avı',e:13,sp:5.3,r:13,pe:12,po:15,pr:4.6,sky:0x101c1a,fog:44}];
+const NM=['Zehirli Gölet','Ölü Kamışlık','Ay Işığı Bataklığı','Hayalet Sazlık','Kral Bataklığı','Çamurlu Geçit','Kara Bataklık','Hırçın Sürü','Sisli Derin','Son Av'];
+for(let n=5;n<100;n++){const t=(n-4)/95;LV.push({n:NM[n%10],e:13+Math.floor((n-4)*.1),sp:5.3+t*.7,r:13+t*4,pe:12,po:15+Math.floor(t*10),pr:4.6+t*1.4,sky:0x101c1a,fog:Math.round(44-t*14)})}
 const pt=[];
 function burst(x,y,z,n,col,vy,sc,g){for(let i=0;i<n;i++){const m=mesh(new THREE.SphereGeometry(sc,5,4),col,x,y,z);m.material.transparent=true;scene.add(m);pt.push({m,vx:rnd(-2,2),vy:rnd(1,vy),vz:rnd(-2,2),l:rnd(.5,1.1),g})}}
 const ffp=[];for(let i=0;i<80;i++)ffp.push(rnd(-26,26),rnd(.5,4),rnd(14,-68));
 const ffg=new THREE.BufferGeometry();ffg.setAttribute('position',new THREE.Float32BufferAttribute(ffp.slice(),3));
 scene.add(new THREE.Points(ffg,new THREE.PointsMaterial({color:0xd8ff6a,size:.38,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false})));
+function item(type,x,z){const g=new THREE.Group();
+ if(type==='poison'){const pr=pear();pr.userData.m.forEach(m=>{m.color.set(0x7fe03a);m.emissive.set(0x1f6a00)});g.add(pr);
+  const au=mesh(new THREE.SphereGeometry(.9,10,8),0x7fe03a,0,.8,0);au.material.transparent=true;au.material.opacity=.25;g.add(au)}
+ else{const b=mesh(new THREE.SphereGeometry(.7,14,10),0x5ac8ff,0,.9,0,0x103a66);b.material.transparent=true;b.material.opacity=.6;g.add(b);g.add(mesh(new THREE.TorusGeometry(.75,.06,6,16),0xffffff,0,.9,0,0x555555))}
+ g.position.set(x,0,z);lv.add(g);return{g,type,taken:false}}
+function gas(x,y,z,bx,bz){const m=mesh(new THREE.SphereGeometry(.25,6,5),0x7fe03a,x,y,z);m.material.transparent=true;scene.add(m);
+ pt.push({m,vx:rnd(-.5,.5)+bx*2,vy:rnd(-.2,.6),vz:rnd(-.5,.5)+bz*2,l:rnd(1,1.6),g:0,gr:1.5})}
 function build(n){L=n;const c=LV[n];TOTAL=c.pe;while(lv.children.length)lv.remove(lv.children[0]);
  zc[0]=c.sky;scene.fog.near=Math.min(22,c.fog*.3);scene.fog.far=c.fog;
  for(let i=0;i<16;i++){const m=mesh(new THREE.CircleGeometry(rnd(2,5),12),i%2?0x33401f:0x4a5630,rnd(-24,24),.015,rnd(12,-66));m.rotation.x=-Math.PI/2;lv.add(m)}
@@ -75,9 +85,11 @@ function build(n){L=n;const c=LV[n];TOTAL=c.pe;while(lv.children.length)lv.remov
  pearList=[];const ord=[0,2,4,6,8,10,1,3,5,7,9,11];
  for(let i=0;i<TOTAL;i++){const q=pearSpots[ord[i]],g=pear();g.position.set(q.x,0,q.z);lv.add(g);pearList.push({g,taken:false})}
  enemies.length=0;
- for(let i=0;i<c.e;i++){const z=-14-i*(52/Math.max(1,c.e-1)),x=n?rnd(-(10+n*2.5),10+n*2.5):(i%2?1:-1)*rnd(12,18),g=platy(0x6b4f7a,0x8a8a30);
+ for(let i=0;i<c.e;i++){const z=-14-i*(52/Math.max(1,c.e-1)),x=n?rnd(-Math.min(24,10+n*2.5),Math.min(24,10+n*2.5)):(i%2?1:-1)*rnd(12,18),g=platy(0x6b4f7a,0x8a8a30);
   g.position.set(x,0,z);lv.add(g);enemies.push({g,hx:x,hz:z,tx:x,tz:z,chase:false})}
- Object.assign(S,{won:false,pears:0,cooking:false,cooked:false,eaten:0,hit:0,jump:0,lives:3,eat:null});
+ items=[];const free=()=>{for(let k=0;k<30;k++){const x=rnd(-15,15),z=rnd(-18,-62);if(pools.every(q=>Math.hypot(x-q.x,z-q.z)>q.r+1.2))return[x,z]}return[0,-30]};
+ for(let i=0;i<(n<2?1:Math.min(4,2+Math.floor(n/25)));i++)for(const ty of['poison','shield']){const[x,z]=free();items.push(item(ty,x,z))}
+ Object.assign(S,{won:false,pears:0,cooking:false,cooked:false,eaten:0,hit:0,jump:0,lives:3,eat:null,fly:0,shield:0});
  roast.forEach(r=>fire.remove(r.g));roast.length=0;$('bar').style.display='none';
  me.position.set(0,0,10);me.rotation.set(0,0,0);me.scale.set(1,1,1);hud();
  if(S.go)toast(`Bölüm ${n+1}: ${c.n}`,2200)}
@@ -114,12 +126,13 @@ const sg=new THREE.BufferGeometry();sg.setAttribute('position',new THREE.Float32
 scene.add(new THREE.Points(sg,new THREE.PointsMaterial({color:0xffffff,size:.6,fog:false})));
 // oyuncu ve düşmanlar
 const me=platy(0x8a5a3a,0xf0a040);me.position.set(0,0,10);
+const shieldM=mesh(new THREE.SphereGeometry(1.9,16,12),0x5ac8ff,0,.9,0);shieldM.material.transparent=true;shieldM.material.opacity=.3;shieldM.visible=false;me.add(shieldM);
 const enemies=[];
 function step(g,tx,tz,s,dt){const dx=tx-g.position.x,dz=tz-g.position.z,d=Math.hypot(dx,dz);
  if(d>.05){const m=Math.min(s*dt,d);g.position.x+=dx/d*m;g.position.z+=dz/d*m;
   let da=Math.atan2(-dx,-dz)-g.rotation.y;da=Math.atan2(Math.sin(da),Math.cos(da));g.rotation.y+=da*Math.min(1,dt*10)}}
 // durum
-const S={go:false,won:false,pears:0,cooking:false,cookT:0,cooked:false,eaten:0,hit:0,jump:0,near:false,lives:3,eat:null,final:false};
+const S={go:false,won:false,pears:0,cooking:false,cookT:0,cooked:false,eaten:0,hit:0,jump:0,near:false,lives:3,eat:null,final:false,fly:0,shield:0};
 const roast=[];let toastT;
 function toast(t,ms=1100){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>e.style.opacity=0,ms)}
 function zone(){const z=me.position.z;return z>-70?0:z>-140?1:2}
@@ -128,7 +141,7 @@ function hud(){let t;const z=zone();
  else if(S.cooked)t='Armutlar pişti! Ateşe yaklaş ve ye.';
  else if(S.cooking)t='Armutlar kamp ateşinde pişiyor…';
  else if(S.pears===TOTAL)t='Tüm armutlar tamam! Kamp ateşine git ve pişir.';
- else if(z===0)t='Bataklıktan kaç! Mor ornitorenklere yakalanma, armut bahçesine ulaş.';
+ else if(z===0)t='Bataklıktan kaç! Mor ornitorenklere yakalanma, armut bahçesine ulaş. Yeşil zehirli armut uçurur, mavi kalkan korur.';
  else if(z===1)t=`Armut topla: ${S.pears}/${TOTAL}`;
  else t=`Önce tüm armutları topla (${S.pears}/${TOTAL}), sonra ateşe dön.`;
  $('obj').textContent=`Bölüm ${L+1}${L?'  '+'❤'.repeat(Math.max(0,S.lives)):''} · `+t}
@@ -142,9 +155,9 @@ function action(){if(!S.go||S.won||!S.near||S.eat)return;
   h.userData.m.forEach(m=>{m.color.set(0x8a4a1a);m.emissive.set(0x220a00)});me.add(h);S.eat={t:0,h,b:0}}}
 function done(){S.won=true;const f=L===LV.length-1;S.final=f;
  $('wh').textContent=f?'Efsane ornitorenk!':`Bölüm ${L+1} tamam!`;
- $('wp').textContent=f?'Beş bölümün hepsini bitirdin, bataklığın en cesur ornitorenkisin. Afiyet olsun!':`Karnın doydu. Sıradaki: ${LV[L+1].n}. Ornitorenkler biraz daha hızlı ve çok olacak!`;
+ $('wp').textContent=f?'Tam 100 bölümü bitirdin, bataklığın en cesur ornitorenkisin. Afiyet olsun!':`Karnın doydu. Sıradaki: ${LV[L+1].n}. Ornitorenkler biraz daha hızlı ve çok olacak!`;
  $('wb').textContent=f?'Baştan oyna':'Sonraki bölüm';$('win').style.display='flex'}
-$('wb').onclick=()=>{if(S.final)location.reload();else{$('win').style.display='none';build(L+1)}};
+$('wb').onclick=()=>{if(S.final)location.reload();else{$('win').style.display='none';try{localStorage.setItem('ornitLv',L+1)}catch(e){}build(L+1)}};
 function caught(){S.hit=1.2;$('flash').style.opacity=.6;setTimeout(()=>$('flash').style.opacity=0,350);
  if(L>0){S.lives--;if(S.lives<=0){toast('Canın bitti! Bölüm baştan başlıyor',1800);build(L);return}}
  toast('Yakalandın! Başa dönüyorsun');me.position.set(0,0,10);hud();
@@ -162,6 +175,7 @@ joy.addEventListener('pointermove',e=>{if(e.buttons||e.pressure)jm(e)});
 const jend=()=>{jx=jz=0;knob.style.left=knob.style.top='35px'};
 joy.addEventListener('pointerup',jend);joy.addEventListener('pointercancel',jend);
 $('go').onclick=()=>{$('start').style.display='none';S.go=true;hud();toast(`Bölüm 1: ${LV[0].n}`,2200)};
+try{const sv=+localStorage.getItem('ornitLv')||0;if(sv>0&&sv<LV.length){$('cont').style.display='inline-block';$('cont').textContent=`Devam et (Bölüm ${sv+1})`;$('cont').onclick=()=>{$('start').style.display='none';S.go=true;build(sv)}}}catch(e){}
 addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
 // döngü
 const clock=new THREE.Clock(),zc=[0x24382f,0x9ccfe0,0x2a2038],zh=[.55,1,.4];let lastZ=-1;
@@ -172,7 +186,7 @@ function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.
  pearList.forEach((p,i)=>{if(!p.taken){p.g.position.y=.15+Math.sin(t*3+i)*.12;p.g.rotation.y=t+i}});
  const P=me.position,fa=ffg.attributes.position;
  for(let i=0;i<80;i++){fa.setX(i,ffp[i*3]+Math.cos(t*.8+i)*.8);fa.setY(i,ffp[i*3+1]+Math.sin(t*1.5+i)*.5)}fa.needsUpdate=true;
- for(let i=pt.length-1;i>=0;i--){const q=pt[i];q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.vy-=q.g*dt;q.l-=dt;q.m.material.opacity=Math.min(1,q.l*2);if(q.l<=0){scene.remove(q.m);pt.splice(i,1)}}
+ for(let i=pt.length-1;i>=0;i--){const q=pt[i];q.m.position.x+=q.vx*dt;q.m.position.y+=q.vy*dt;q.m.position.z+=q.vz*dt;q.vy-=q.g*dt;if(q.gr)q.m.scale.addScalar(q.gr*dt);q.l-=dt;q.m.material.opacity=Math.min(1,q.l*2);if(q.l<=0){scene.remove(q.m);pt.splice(i,1)}}
  if(Math.random()<.4)burst(rnd(-.4,.4),1.4,-165+rnd(-.4,.4),1,0xffb040,4,.05,3);
  if(S.eat){const E=S.eat;E.t+=dt;const k=E.t/1.3,b=Math.min(3,Math.floor(k*4));
   if(b>E.b){E.b=b;burst(P.x,.9,P.z-1.7,9,0xa86a2a,3.5,.07,9)}
@@ -180,19 +194,25 @@ function loop(){requestAnimationFrame(loop);const dt=Math.min(clock.getDelta(),.
   me.rotation.x=-Math.abs(Math.sin(E.t*25))*.1;me.scale.x=1+Math.sin(E.t*22)*.05;
   if(k>=1){me.remove(E.h);me.rotation.x=0;me.scale.set(1,1,1);S.eaten++;S.jump=.45;burst(P.x,2,P.z,8,0xff6a9a,3,.13,-1);
    toast(['Nefis!','Çok lezzetli!','Mmm, tatlı!','Daha var!'][S.eaten%4]);S.eat=null;hud();if(S.eaten===TOTAL)setTimeout(done,700)}}
+ items.forEach((q,i)=>{if(!q.taken){q.g.position.y=.2+Math.sin(t*3+i)*.15;q.g.rotation.y=t*1.5}});
+ shieldM.visible=S.shield>0;if(S.shield>0){shieldM.scale.setScalar(1+Math.sin(t*8)*.05);shieldM.material.opacity=S.shield<2&&Math.floor(t*8)%2?.1:.3}
+ $('fx').textContent=(S.fly>0?`💨 Uçuş ${S.fly.toFixed(1)} sn   `:'')+(S.shield>0?`🛡 Kalkan ${S.shield.toFixed(1)} sn`:'')
 
  if(S.go&&!S.won){
   const p=me.position;let ix=(keys.arrowright||keys.d?1:0)-(keys.arrowleft||keys.a?1:0)+jx,iz=(keys.arrowdown||keys.s?1:0)-(keys.arrowup||keys.w?1:0)+jz;
   const m=Math.hypot(ix,iz);if(m>1){ix/=m;iz/=m}
-  const wet=pools.some(q=>Math.hypot(p.x-q.x,p.z-q.z)<q.r),spd=wet?3.4:6;
+  const wet=!S.fly&&pools.some(q=>Math.hypot(p.x-q.x,p.z-q.z)<q.r),spd=S.fly?8.5:(wet?3.4:6);
   if(m>.1&&!S.eat){step(me,p.x+ix*10,p.z+iz*10,spd*Math.min(1,m),dt);me.rotation.z=Math.sin(t*14)*.09}else me.rotation.z=0;
   p.x=Math.max(-25,Math.min(25,p.x));p.z=Math.max(-182,Math.min(14,p.z));
-  S.jump=Math.max(0,S.jump-dt);p.y=S.jump>0?Math.sin(S.jump/.45*Math.PI)*1.2:(m>.1?Math.abs(Math.sin(t*14))*.07:0)-(wet?.12:0);
-  S.hit=Math.max(0,S.hit-dt);
+  S.jump=Math.max(0,S.jump-dt);{const gy=S.fly>0?4+Math.sin(t*3)*.4:(S.jump>0?Math.sin(S.jump/.45*Math.PI)*1.2:(m>.1?Math.abs(Math.sin(t*14))*.07:0)-(wet?.12:0));p.y=S.fly>0||p.y>gy+.1?p.y+(gy-p.y)*Math.min(1,dt*5):gy}
+  S.hit=Math.max(0,S.hit-dt);S.fly=Math.max(0,S.fly-dt);S.shield=Math.max(0,S.shield-dt);
+  if(S.fly>0){const a=me.rotation.y;gas(p.x+Math.sin(a)*1.9,p.y+.7,p.z+Math.cos(a)*1.9,Math.sin(a),Math.cos(a))}
   for(const e of enemies){const g=e.g.position,d=Math.hypot(p.x-g.x,p.z-g.z);e.chase=d<(e.chase?LV[L].r+5:LV[L].r);
    if(e.chase)step(e.g,p.x,p.z,LV[L].sp,dt);else{if(Math.hypot(e.tx-g.x,e.tz-g.z)<.6){e.tx=e.hx+rnd(-6,6);e.tz=e.hz+rnd(-5,5)}step(e.g,e.tx,e.tz,1.2+L*.3,dt)}
    e.g.position.y=Math.abs(Math.sin(t*10+e.hx))*.05;
-   if(!S.hit&&d<1.8)caught()}
+   if(!S.hit&&!S.shield&&!S.fly&&d<1.8)caught()}
+  for(const q of items)if(!q.taken&&Math.hypot(p.x-q.g.position.x,p.z-q.g.position.z)<1.8){q.taken=true;lv.remove(q.g);
+   if(q.type==='poison'){S.fly=7;burst(p.x,1,p.z,12,0x7fe03a,4,.2,2);toast('Zehirli armut! Pffrrt… Uçuyorsun!',1600)}else{S.shield=7;toast('Kalkan! 7 saniye dokunulmazsın',1600)}}
   for(const q of pearList)if(!q.taken&&Math.hypot(p.x-q.g.position.x,p.z-q.g.position.z)<1.8){q.taken=true;lv.remove(q.g);S.pears++;toast(`+1 armut (${S.pears}/${TOTAL})`,700);hud()}
   S.near=Math.hypot(p.x-fire.position.x,p.z-fire.position.z)<6;
   if(S.cooking){S.cookT+=dt;const k=Math.min(1,S.cookT/4);$('bar').firstChild.style.width=k*100+'%';
